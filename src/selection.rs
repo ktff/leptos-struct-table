@@ -15,6 +15,10 @@ pub enum Selection {
     /// Allow multiple rows to be selected at a time. Each entry in the `Vec`
     /// is the index of a selected row.
     Multiple(RwSignal<HashSet<usize>>),
+
+    /// All rows are selected by default. The `HashSet` contains **deselected** indices.
+    /// Clicking a row toggles it out of (or back into) the selection.
+    MultipleInverted(RwSignal<HashSet<usize>>),
 }
 
 impl Selection {
@@ -27,6 +31,9 @@ impl Selection {
             }
             Selection::Multiple(selected_indices) => {
                 selected_indices.write().clear();
+            }
+            Selection::MultipleInverted(deselected_indices) => {
+                deselected_indices.write().clear();
             }
         }
     }

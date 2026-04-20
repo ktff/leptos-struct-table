@@ -317,6 +317,8 @@ where
         }
     });
 
+    let selection_inverted = matches!(selection, Selection::MultipleInverted(_));
+
     let selected_indices = match selection {
         Selection::None => Signal::stored(HashSet::new()),
         Selection::Single(selected_index) => Signal::derive(move || {
@@ -326,6 +328,7 @@ where
                 .unwrap_or_default()
         }),
         Selection::Multiple(selected_indices) => selected_indices.into(),
+        Selection::MultipleInverted(deselected_indices) => deselected_indices.into(),
     };
 
     let scroll_container = scroll_container.into_element_maybe_signal();
@@ -613,7 +616,7 @@ where
                         match row {
                             RowState::Loaded(row) => {
                                 let selected_signal = Signal::derive(move || {
-                                    selected_indices.read().contains(&i)
+                                    selected_indices.read().contains(&i) != selection_inverted
                                 });
 
                                 let class_signal = Signal::derive(move || {
@@ -648,7 +651,7 @@ where
                                                 changed_row: row.into(),
                                             });
                                     },
-                                    false,
+                                    selection_inverted,
                                 );
                                 row_renderer
                                     .run(class_signal, row, i, selected_signal, on_select.into(), columns)
@@ -834,6 +837,32 @@ fn update_selection(
             } else {
                 HashSet::clear(&mut *indices);
                 indices.insert(i);
+                first_selected_index.set(Some(i));
+            }
+        }
+        Selection::MultipleInverted(deselected_indices) => {
+            let mut indices = deselected_indices.write();
+            let (_, shift_pressed) = get_keyboard_modifiers(&evt);
+
+            if shift_pressed {
+                // Shift+click: deselect range from anchor to clicked row
+                if let Some(first) = first_selected_index.get() {
+                    let min = first.min(i);
+                    let max = first.max(i);
+                    for idx in min..=max {
+                        indices.insert(idx);
+                    }
+                } else {
+                    indices.insert(i);
+                    first_selected_index.set(Some(i));
+                }
+            } else {
+                // Plain or Ctrl+click: toggle single row
+                if indices.contains(&i) {
+                    indices.remove(&i);
+                } else {
+                    indices.insert(i);
+                }
                 first_selected_index.set(Some(i));
             }
         }
