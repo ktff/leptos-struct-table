@@ -25,6 +25,6 @@ where
     M: 'static,
 {
     view! {
-        <td class=class>{move || value.get().render_value(options.clone())}</td>
+        <td class=class><div class="cell-content">{move || value.get().render_value(options.clone())}</div></td>
     }
 }
